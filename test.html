@@ -2,100 +2,123 @@
 <html>
 <head>
 <meta charset=utf-8 />
-<title>Layers</title>
+<title>St. Louis Coop Community</title>
 
   <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
-  <script src='//api.tiles.mapbox.com/mapbox.js/v1.5.1/mapbox.js'></script>
-  <link href='//api.tiles.mapbox.com/mapbox.js/v1.5.1/mapbox.css' rel='stylesheet' />
 
+  <script src='//api.tiles.mapbox.com/mapbox.js/v1.5.1/mapbox.js'></script>
+  <script src='//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.js'></script>
+  <script src='set.js'></script>
+
+  <link href='//api.tiles.mapbox.com/mapbox.js/v1.5.1/mapbox.css' rel='stylesheet' />
   <style>
     body { margin:0; padding:0; }
     #map { position:absolute; top:0; bottom:0; width:100%; }
+    /* Shamelessly stolen from mapbox examples... */
+    #map-ui {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 100;
+    }
+
+    #map-ui ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    #map-ui a {
+        font-size: 13px;
+        background: #FFF;
+        color: #3C4E5A;
+        display: block;
+        margin: 0;
+        padding: 0;
+        border: 1px solid #BBB;
+        border-bottom-width: 0;
+        min-width: 138px;
+        padding: 10px;
+        text-decoration: none;
+    }
+
+    #map-ui a:hover {
+        background: #ECF5FA;
+    }
+
+    #map-ui li:last-child a {
+        border-bottom-width: 1px;
+        -webkit-border-radius: 0 0 3px 3px;
+        border-radius: 0 0 3px 3px;
+    }
+
+    #map-ui li:first-child a {
+        -webkit-border-radius: 3px 3px 0 0;
+        border-radius: 3px 3px 0 0;
+    }
+
+    #map-ui a.active {
+        background: #3887BE;
+        border-color: #3887BE;
+        color: #FFF;
+    }
   </style>
 
 </head>
 <body>
-<ul id='map-ui'></ul>
+<div id='map-ui'>
+    <ul>
+        <li><a href='#' id='bank-filter'>Financial</a></li>
+        <li><a href='#' id='restaurant-filter'>Restaurants</a></li>
+    </ul>
+</div>
 <div id='map'></div>
 <script>
-var map = L.mapbox.map('map').setView([38.608, -90.2344], 13);
-var ui = document.getElementById('map-ui');
+var map = L.mapbox.map('map', 'schimmy.gg480cl6').setView([38.6395, -90.2185], 12);
 
+// start off with these active
+var showSet = new set({
+'bank':''
+});
 
-function addLayer(layer, name, zIndex) {
-    layer
-        .setZIndex(zIndex)
-        .addTo(map);
+updateMarkerFilter(showSet);
 
-    // Create a simple layer switcher that toggles layers on
-    // and off.
-    var item = document.createElement('li');
-    var link = document.createElement('a');
+// need to map from marker symbol to logical name
+var symbolToId = new set({
+    "town-hall" : "bank",
+    "restaurant": "restaurant"
+});
 
-    link.href = '#';
-    link.className = 'active';
-    link.innerHTML = name;
+// setup each 'layer' of markers
+$.each(symbolToId.keys(), function(i, k) {
+  var id = symbolToId.get(k);
+  var filterID = '#'+id+'-filter';
 
-    link.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+  if (showSet.has(id)) {
+    $(filterID).addClass('active');
+  }
 
-        if (map.hasLayer(layer)) {
-            map.removeLayer(layer);
-            this.className = '';
-        } else {
-            map.addLayer(layer);
-            this.className = 'active';
-        }
-    };
-
-    item.appendChild(link);
-    ui.appendChild(item);
-}
-
-var bankLayer = {
-    type: 'FeatureCollection',
-    features: [{
-        type: 'Feature',
-        properties: {
-            title: 'ABC Bank',
-            'marker-color': '#080',
-            'marker-symbol': 'town-hall',
-            'marker-size': 'small'
-        },
-        geometry: {
-            type: 'Point',
-            coordinates: [-90.2344, 38.608]
-        }
-    },
-    {
-        type: 'Feature',
-        properties: {
-            title: 'XYZ Bank',
-            'marker-color': '#080',
-            'marker-symbol': 'town-hall',
-            'marker-size': 'small'
-        },
-        geometry: {
-            type: 'Point',
-            coordinates: [-90.2340, 38.618]
-        }
-    }]
-};
-
-map.markerLayer.setGeoJSON(bankLayer);
-/*
-def createMarkerLayer(locObj, color, symbol) {
-    var featList = []
-    for (
-    var geoJson = {
-      type: 'FeatureCollection',
-      features: featList
+  // toggle display on click
+  $(filterID).click(function(e) {
+    if ($(filterID).hasClass('active')) {
+      $(filterID).removeClass('active');
+      showSet.remove(id);
     }
-}*/
+    else {
+      $(filterID).addClass('active');
+      showSet.add(id);
+    }
+    updateMarkerFilter(showSet);
+    return false;
+  });
+});
 
-addLayer(L.mapbox.tileLayer('schimmy.gg480cl6'), 'Base Map', 1);
-
+function updateMarkerFilter(showSet) {
+  map.markerLayer.setFilter(function(f) {
+    // TODO error handling here...
+    return showSet.has(symbolToId.get(f.properties['marker-symbol']));
+  })
+}
 
 </script>
 </body>
